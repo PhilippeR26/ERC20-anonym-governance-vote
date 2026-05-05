@@ -2,6 +2,8 @@
 #[starknet::interface]
 pub trait IAnonGovernor<TState> {
     fn upgrade(ref self: TState, new_class_hash: starknet::ClassHash);
+    fn quorum_reached(self: @TState, proposal_id: felt252) -> bool;
+    fn vote_succeeded(self: @TState, proposal_id: felt252) -> bool;
 }
 
 #[starknet::contract]
@@ -12,6 +14,7 @@ pub mod AnonGovernor {
         GovernorSettingsComponent, GovernorVotesComponent,
     };
     use openzeppelin::governance::governor::{DefaultConfig, GovernorComponent};
+    use openzeppelin::governance::governor::GovernorComponent::GovernorCountingTrait;
     use openzeppelin::introspection::src5::SRC5Component;
     use openzeppelin::upgrades::UpgradeableComponent;
     use openzeppelin::utils::cryptography::snip12::SNIP12Metadata;
@@ -168,6 +171,14 @@ pub mod AnonGovernor {
         fn upgrade(ref self: ContractState, new_class_hash: ClassHash) {
             self.ownable.assert_only_owner();
             self.upgradeable.upgrade(new_class_hash);
+        }
+
+        fn quorum_reached(self: @ContractState, proposal_id: felt252) -> bool {
+            self.governor.quorum_reached(proposal_id)
+        }
+
+        fn vote_succeeded(self: @ContractState, proposal_id: felt252) -> bool {
+            self.governor.vote_succeeded(proposal_id)
         }
     }
 }

@@ -126,3 +126,47 @@ fn create_active_proposal(d: @Deployment) -> felt252 {
     start_cheat_block_number_global(4);
     proposal_id
 }
+
+// ── Drop impl for Deployment (required in integration tests) ─────────────────
+
+impl DeploymentDrop of Drop<Deployment> {}
+
+// ── Tests counting_mode ───────────────────────────────────────────────────────
+
+#[test]
+fn test_counting_mode() {
+    let d = setup();
+    let mode = d.governor.COUNTING_MODE();
+    assert_eq!(mode, "support=bravo&quorum=for,abstain&params=snip36-anon");
+}
+
+// ── Tests is_nullifier_used ───────────────────────────────────────────────────
+
+#[test]
+fn test_is_nullifier_used_false_by_default() {
+    let d = setup();
+    let result = d.anon_governor.is_nullifier_used(0_felt252, 0xdeadbeef_felt252);
+    assert_eq!(result, false);
+}
+
+// ── Tests quorum_reached via vote_tally ───────────────────────────────────────
+
+#[test]
+fn test_quorum_not_reached_with_empty_votes() {
+    start_cheat_block_number_global(1);
+    let d = setup();
+    let proposal_id = create_active_proposal(@d);
+    let gov = IAnonGovernorDispatcher { contract_address: d.gov_addr };
+    assert_eq!(gov.quorum_reached(proposal_id), false);
+}
+
+// ── Tests vote_succeeded ──────────────────────────────────────────────────────
+
+#[test]
+fn test_vote_not_succeeded_with_no_votes() {
+    start_cheat_block_number_global(1);
+    let d = setup();
+    let proposal_id = create_active_proposal(@d);
+    let gov = IAnonGovernorDispatcher { contract_address: d.gov_addr };
+    assert_eq!(gov.vote_succeeded(proposal_id), false);
+}
