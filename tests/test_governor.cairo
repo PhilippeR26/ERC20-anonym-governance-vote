@@ -1,5 +1,7 @@
 use core::poseidon::poseidon_hash_span;
 use openzeppelin::governance::governor::extensions::GovernorCountingAnonymousComponent::AnonVoteMessage;
+use openzeppelin::interfaces::governance::governor::ProposalState;
+use openzeppelin::utils::bytearray::ByteArrayExtTrait;
 use snforge_std::{
     ContractClassTrait, DeclareResultTrait, declare,
     start_cheat_block_number_global, stop_cheat_block_number_global,
@@ -266,4 +268,58 @@ fn test_cast_anonymous_vote_wrong_proof_count() {
 
     start_cheat_caller_address(d.gov_addr, VOTER());
     d.anon_governor.cast_anonymous_vote(msg);
+}
+
+// ── Test cycle de vie complet ─────────────────────────────────────────────────
+
+#[test]
+fn test_propose_and_full_lifecycle() {
+    start_cheat_block_number_global(1);
+    let d = setup();
+
+    start_cheat_block_number_global(2);
+
+    start_cheat_caller_address(d.gov_addr, VOTER());
+    let proposal_id = d.governor.propose(array![].span(), "Lifecycle test");
+    stop_cheat_caller_address(d.gov_addr);
+
+    // Pending state (vote_start = 2 + 1 = 3, current block = 2)
+    let state_pending = d.governor.state(proposal_id);
+    assert_eq!(state_pending, ProposalState::Pending);
+
+    // Advance past vote_start → Active
+    start_cheat_block_number_global(4);
+    let state_active = d.governor.state(proposal_id);
+    assert_eq!(state_active, ProposalState::Active);
+
+    // Vote anonymement
+    let signature = array![0x111_felt252, 0x222_felt252];
+    let nullifier = compute_nullifier(proposal_id, signature.span());
+    let msg = AnonVoteMessage {
+        proposal_id, nullifier, support: 1, weight: INITIAL_SUPPLY,
+    };
+
+    let message_hash = compute_message_hash(d.gov_addr, @msg);
+    let proof_facts = build_proof_facts(message_hash);
+    start_cheat_proof_facts(d.gov_addr, proof_facts.span());
+
+    start_cheat_caller_address(d.gov_addr, VOTER());
+    d.anon_governor.cast_anonymous_vote(msg);
+    stop_cheat_caller_address(d.gov_addr);
+    stop_cheat_proof_facts(d.gov_addr);
+
+    // Advance past vote_end (vote_start=3 + period=50 = 53 → advance to 54)
+    start_cheat_block_number_global(54);
+    let state_succeeded = d.governor.state(proposal_id);
+    assert_eq!(state_succeeded, ProposalState::Succeeded);
+
+    // Execute the proposal
+    let description: ByteArray = "Lifecycle test";
+    let description_hash = description.hash();
+    start_cheat_caller_address(d.gov_addr, VOTER());
+    d.governor.execute(array![].span(), description_hash);
+    stop_cheat_caller_address(d.gov_addr);
+
+    let state_executed = d.governor.state(proposal_id);
+    assert_eq!(state_executed, ProposalState::Executed);
 }
