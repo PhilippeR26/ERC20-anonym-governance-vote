@@ -103,7 +103,7 @@ pub mod AnonGovernor {
         #[substorage(v0)]
         upgradeable: UpgradeableComponent::Storage,
         // Quorum stocké séparément (non géré par GovernorSettings)
-        pub Governor_quorum: u256,
+        Governor_quorum: u256,
     }
 
     #[event]
@@ -119,8 +119,11 @@ pub mod AnonGovernor {
         GovernorSettingsEvent: GovernorSettingsComponent::Event,
         #[flat]
         UpgradeableEvent: UpgradeableComponent::Event,
+        #[flat]
         SRC5Event: SRC5Component::Event,
+        #[flat]
         GovernorVotesEvent: GovernorVotesComponent::Event,
+        #[flat]
         GovernorCoreExecutionEvent: GovernorCoreExecutionComponent::Event,
     }
 
