@@ -181,13 +181,12 @@ fn test_cast_anonymous_vote_ok() {
 
     let signature = array![0xaaa_felt252, 0xbbb_felt252];
     let nullifier = compute_nullifier(proposal_id, signature.span());
-    let weight = INITIAL_SUPPLY;
 
     let msg = AnonVoteMessage {
         proposal_id,
         nullifier,
         support: 1,
-        weight,
+        weight: INITIAL_SUPPLY,
     };
 
     let message_hash = compute_message_hash(d.gov_addr, @msg);
@@ -215,9 +214,8 @@ fn test_cast_anonymous_vote_nullifier_replay() {
 
     let signature = array![0xaaa_felt252, 0xbbb_felt252];
     let nullifier = compute_nullifier(proposal_id, signature.span());
-    let weight = INITIAL_SUPPLY;
 
-    let msg = AnonVoteMessage { proposal_id, nullifier, support: 1, weight };
+    let msg = AnonVoteMessage { proposal_id, nullifier, support: 1, weight: INITIAL_SUPPLY };
 
     let message_hash = compute_message_hash(d.gov_addr, @msg);
     let proof_facts = build_proof_facts(message_hash);
@@ -226,10 +224,8 @@ fn test_cast_anonymous_vote_nullifier_replay() {
     start_cheat_caller_address(d.gov_addr, VOTER());
     d.anon_governor.cast_anonymous_vote(msg);
 
-    let msg2 = AnonVoteMessage { proposal_id, nullifier, support: 1, weight };
+    let msg2 = AnonVoteMessage { proposal_id, nullifier, support: 1, weight: INITIAL_SUPPLY };
     d.anon_governor.cast_anonymous_vote(msg2);
-    stop_cheat_caller_address(d.gov_addr);
-    stop_cheat_proof_facts(d.gov_addr);
 }
 
 #[test]
@@ -250,8 +246,6 @@ fn test_cast_anonymous_vote_invalid_proof() {
 
     start_cheat_caller_address(d.gov_addr, VOTER());
     d.anon_governor.cast_anonymous_vote(msg);
-    stop_cheat_caller_address(d.gov_addr);
-    stop_cheat_proof_facts(d.gov_addr);
 }
 
 #[test]
@@ -272,6 +266,4 @@ fn test_cast_anonymous_vote_wrong_proof_count() {
 
     start_cheat_caller_address(d.gov_addr, VOTER());
     d.anon_governor.cast_anonymous_vote(msg);
-    stop_cheat_caller_address(d.gov_addr);
-    stop_cheat_proof_facts(d.gov_addr);
 }
