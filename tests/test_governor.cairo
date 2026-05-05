@@ -170,3 +170,108 @@ fn test_vote_not_succeeded_with_no_votes() {
     let gov = IAnonGovernorDispatcher { contract_address: d.gov_addr };
     assert_eq!(gov.vote_succeeded(proposal_id), false);
 }
+
+// ── Tests cast_anonymous_vote ─────────────────────────────────────────────────
+
+#[test]
+fn test_cast_anonymous_vote_ok() {
+    start_cheat_block_number_global(1);
+    let d = setup();
+    let proposal_id = create_active_proposal(@d);
+
+    let signature = array![0xaaa_felt252, 0xbbb_felt252];
+    let nullifier = compute_nullifier(proposal_id, signature.span());
+    let weight = INITIAL_SUPPLY;
+
+    let msg = AnonVoteMessage {
+        proposal_id,
+        nullifier,
+        support: 1,
+        weight,
+    };
+
+    let message_hash = compute_message_hash(d.gov_addr, @msg);
+    let proof_facts = build_proof_facts(message_hash);
+    start_cheat_proof_facts(d.gov_addr, proof_facts.span());
+
+    start_cheat_caller_address(d.gov_addr, VOTER());
+    d.anon_governor.cast_anonymous_vote(msg);
+    stop_cheat_caller_address(d.gov_addr);
+
+    stop_cheat_proof_facts(d.gov_addr);
+
+    let gov = IAnonGovernorDispatcher { contract_address: d.gov_addr };
+    assert_eq!(d.anon_governor.is_nullifier_used(proposal_id, nullifier), true);
+    assert_eq!(gov.quorum_reached(proposal_id), true);
+    assert_eq!(gov.vote_succeeded(proposal_id), true);
+}
+
+#[test]
+#[should_panic(expected: 'Nullifier already used')]
+fn test_cast_anonymous_vote_nullifier_replay() {
+    start_cheat_block_number_global(1);
+    let d = setup();
+    let proposal_id = create_active_proposal(@d);
+
+    let signature = array![0xaaa_felt252, 0xbbb_felt252];
+    let nullifier = compute_nullifier(proposal_id, signature.span());
+    let weight = INITIAL_SUPPLY;
+
+    let msg = AnonVoteMessage { proposal_id, nullifier, support: 1, weight };
+
+    let message_hash = compute_message_hash(d.gov_addr, @msg);
+    let proof_facts = build_proof_facts(message_hash);
+
+    start_cheat_proof_facts(d.gov_addr, proof_facts.span());
+    start_cheat_caller_address(d.gov_addr, VOTER());
+    d.anon_governor.cast_anonymous_vote(msg);
+
+    let msg2 = AnonVoteMessage { proposal_id, nullifier, support: 1, weight };
+    d.anon_governor.cast_anonymous_vote(msg2);
+    stop_cheat_caller_address(d.gov_addr);
+    stop_cheat_proof_facts(d.gov_addr);
+}
+
+#[test]
+#[should_panic(expected: 'Proof message mismatch')]
+fn test_cast_anonymous_vote_invalid_proof() {
+    start_cheat_block_number_global(1);
+    let d = setup();
+    let proposal_id = create_active_proposal(@d);
+
+    let signature = array![0xaaa_felt252, 0xbbb_felt252];
+    let nullifier = compute_nullifier(proposal_id, signature.span());
+    let msg = AnonVoteMessage {
+        proposal_id, nullifier, support: 1, weight: INITIAL_SUPPLY,
+    };
+
+    let wrong_proof = build_proof_facts(0xdeadbeef_felt252);
+    start_cheat_proof_facts(d.gov_addr, wrong_proof.span());
+
+    start_cheat_caller_address(d.gov_addr, VOTER());
+    d.anon_governor.cast_anonymous_vote(msg);
+    stop_cheat_caller_address(d.gov_addr);
+    stop_cheat_proof_facts(d.gov_addr);
+}
+
+#[test]
+#[should_panic(expected: 'Expected 1 proof msg')]
+fn test_cast_anonymous_vote_wrong_proof_count() {
+    start_cheat_block_number_global(1);
+    let d = setup();
+    let proposal_id = create_active_proposal(@d);
+
+    let signature = array![0xaaa_felt252, 0xbbb_felt252];
+    let nullifier = compute_nullifier(proposal_id, signature.span());
+    let msg = AnonVoteMessage {
+        proposal_id, nullifier, support: 1, weight: INITIAL_SUPPLY,
+    };
+
+    let empty_proof: Array<felt252> = array![0, 0, 0, 0, 0, 0, 0, 0];
+    start_cheat_proof_facts(d.gov_addr, empty_proof.span());
+
+    start_cheat_caller_address(d.gov_addr, VOTER());
+    d.anon_governor.cast_anonymous_vote(msg);
+    stop_cheat_caller_address(d.gov_addr);
+    stop_cheat_proof_facts(d.gov_addr);
+}
