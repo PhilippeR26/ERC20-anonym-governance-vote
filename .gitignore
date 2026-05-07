@@ -1,1 +1,6 @@
 target/
+.claude/
+CLAUDE.md
+.snfoundry_cache/
+docs/superpowers/
+

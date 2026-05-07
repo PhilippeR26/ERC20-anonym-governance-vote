@@ -25,3 +25,10 @@ name = "erc20_anon_gov_tests"
 source-path = "tests/lib.cairo"
 test-type = "integration"
 build-external-contracts = ["erc20_anon_gov::token::GovToken", "erc20_anon_gov::governor::AnonGovernor"]
+
+[profile.dev.cairo] 
+add-statements-code-locations-debug-info = true
+add-statements-functions-debug-info = true
+add-functions-debug-info = true
+skip-optimizations = true
+
