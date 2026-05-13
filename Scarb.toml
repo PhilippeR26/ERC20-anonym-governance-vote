@@ -7,7 +7,7 @@ scarb-version = "2.18.0"
 
 [dependencies]
 starknet = "2.18.0"
-openzeppelin = { git = "https://github.com/PhilippeR26/OZ-contracts", branch = "anonym-vote" }
+openzeppelin = { git = "https://github.com/PhilippeR26/OZ-contracts", branch = "anon-vote-frontend" }
 
 [dev-dependencies]
 snforge_std = "0.60.0"
