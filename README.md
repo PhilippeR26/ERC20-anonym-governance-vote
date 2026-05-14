@@ -167,6 +167,23 @@ openzeppelin = { git = "https://github.com/PhilippeR26/OZ-contracts", branch = "
 
 ---
 
+## Lessons Learned
+
+### Proof generation is resource-intensive
+
+Generating a SNIP-36 proof is computationally heavy: on current hardware it takes **40–50 seconds** and requires a backend with at least **18 GB of RAM**. This makes it impractical to run the proof server on a standard machine or in a serverless environment. A dedicated, high-memory backend is mandatory for any production deployment.
+
+### Starknet wallets are not SNIP-36 friendly
+
+Current Starknet wallets (Argent, Braavos, …) are not designed for SNIP-36 and block the flow at two points:
+
+- They cannot produce a raw `INVOKE_TXN_V3` signed transaction object (needed to call `create_proof` on the proof server). Obtaining this format requires `account.getSignedTransaction()` from a dedicated starknet.js build.
+- They cannot attach proof facts and a STARK proof to a transaction, so they cannot submit `cast_anonymous_vote` either.
+
+Until wallets expose SNIP-36 primitives natively, anonymous voting requires a custom off-wallet execution path for everything after the initial SNIP-12 signature.
+
+---
+
 ## License
 
 MIT
